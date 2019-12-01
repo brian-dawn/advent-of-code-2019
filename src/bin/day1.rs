@@ -36,11 +36,10 @@ fn test_compute_fuel_fuel() {
 
 fn main() {
     let input = read_input().expect("failed to load input");
-    let part1: i32 = input.iter().map(|i| compute_fuel(*i)).sum();
 
+    let part1: i32 = input.iter().map(|i| compute_fuel(*i)).sum();
     println!("part1: {}", part1);
 
     let part2: i32 = input.iter().map(|i| compute_fuel_fuel(*i)).sum();
-
     println!("part2: {}", part2);
 }
