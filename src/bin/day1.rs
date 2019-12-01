@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::iter::Sum;
 
 fn read_input() -> Option<Vec<i32>> {
     let input = File::open("input/day1.txt").ok()?;
@@ -27,7 +26,7 @@ fn compute_fuel_fuel(mass: i32) -> i32 {
     if cost < 0 {
         return 0;
     }
-    return cost + compute_fuel_fuel(cost);
+    cost + compute_fuel_fuel(cost)
 }
 
 #[test]
