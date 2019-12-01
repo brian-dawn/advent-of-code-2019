@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader};
 use std::iter::Sum;
 
 fn read_input() -> Option<Vec<i32>> {
-    let input = File::open("input/part1.txt").ok()?;
+    let input = File::open("input/day1.txt").ok()?;
     let buffered = BufReader::new(input);
 
     buffered
@@ -36,17 +36,15 @@ fn test_compute_fuel_fuel() {
 }
 
 fn main() {
-    let input = read_input();
-    let part1: i32 = read_input()
-        .expect("failed to load input")
+    let input = read_input().expect("failed to load input");
+    let part1: i32 = input
         .iter()
         .map(|i| compute_fuel(*i))
         .sum();
 
     println!("part1: {}", part1);
 
-    let part2: i32 = read_input()
-        .expect("failed to load input")
+    let part2: i32 = input
         .iter()
         .map(|i| compute_fuel_fuel(*i))
         .sum();
