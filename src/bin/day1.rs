@@ -22,17 +22,17 @@ fn test_compute_fuel() {
     assert_eq!(33583, compute_fuel(100756));
 }
 
-fn compute_fuel_fuel(mass: i32, sum: i32) -> i32 {
+fn compute_fuel_fuel(mass: i32) -> i32 {
     let cost = compute_fuel(mass);
-    if cost > 0 {
-        return compute_fuel_fuel(cost, sum + cost);
+    if cost < 0 {
+        return 0;
     }
-    return sum;
+    return cost + compute_fuel_fuel(cost);
 }
 
 #[test]
 fn test_compute_fuel_fuel() {
-    assert_eq!(50346, compute_fuel_fuel(100756, 0));
+    assert_eq!(50346, compute_fuel_fuel(100756));
 }
 
 fn main() {
@@ -48,7 +48,7 @@ fn main() {
     let day2: i32 = read_input()
         .expect("failed to load input")
         .iter()
-        .map(|i| compute_fuel_fuel(*i, 0))
+        .map(|i| compute_fuel_fuel(*i))
         .sum();
 
     println!("day2: {}", day2);
