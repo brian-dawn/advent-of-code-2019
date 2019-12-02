@@ -1,13 +1,15 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-fn read_input() -> Option<Vec<i32>> {
-    let input = File::open("input/day1.txt").ok()?;
+use anyhow::Result;
+
+fn read_input() -> Result<Vec<i32>> {
+    let input = File::open("input/day1.txt")?;
     let buffered = BufReader::new(input);
 
     buffered
         .lines()
-        .map(|line| Some(line.ok()?.parse::<i32>().ok()?))
+        .map(|line| Ok(line?.parse::<i32>()?))
         .collect()
 }
 
@@ -34,12 +36,14 @@ fn test_compute_fuel_fuel() {
     assert_eq!(50346, compute_fuel_fuel(100756));
 }
 
-fn main() {
-    let input = read_input().expect("failed to load input");
+fn main() -> Result<()> {
+    let input = read_input()?;
 
     let part1: i32 = input.iter().map(|i| compute_fuel(*i)).sum();
     println!("part1: {}", part1);
 
     let part2: i32 = input.iter().map(|i| compute_fuel_fuel(*i)).sum();
     println!("part2: {}", part2);
+
+    Ok(())
 }
