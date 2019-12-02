@@ -16,16 +16,26 @@ fn run(noun: usize, verb: usize, data: &[usize]) -> Option<Vec<usize>> {
     program[2] = verb;
 
     for index in (0..program.len()).step_by(4) {
-        let opcode = program[index];
+        let opcode = *program.get(index)?;
 
-        let read_pos_a = program[index + 1];
-        let read_pos_b = program[index + 2];
-        let out_pos = program[index + 3];
+        if opcode == 99 {
+            break;
+        }
+
+        let read_pos_a = *program.get(index + 1)?;
+        let read_pos_b = *program.get(index + 2)?;
+        let out_pos = *program.get(index + 3)?;
+
+        if out_pos >= program.len() {
+            return None;
+        }
+
+        let a = program.get(read_pos_a)?;
+        let b = program.get(read_pos_b)?;
 
         match opcode {
-            1 => program[out_pos] = program[read_pos_a] + program[read_pos_b],
-            2 => program[out_pos] = program[read_pos_a] * program[read_pos_b],
-            99 => break,
+            1 => program[out_pos] = a + b,
+            2 => program[out_pos] = a * b,
             _ => return None,
         }
     }
