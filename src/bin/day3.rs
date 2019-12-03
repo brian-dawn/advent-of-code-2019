@@ -199,8 +199,6 @@ fn walk_to_cross_point(directions: &Vec<Direction>, destination: Point) -> Optio
     for direction in directions {
         let (new_point, marked_points) = location.add_direction(*direction);
         if let Some(index) = marked_points.iter().position(|p| *p == destination) {
-            println!("{} {}", marked_points.len(), index);
-
             match direction {
                 Direction::U(_) | Direction::L(_) => {
                     return Some(distance + marked_points.len() - index)
@@ -254,7 +252,6 @@ fn part2(all_directions: &Directions) -> Result<usize> {
     cross_points
         .iter()
         .map(|destination| {
-            println!("");
             all_directions
                 .iter()
                 .map(|directions| walk_to_cross_point(&directions, *destination))
