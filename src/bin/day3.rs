@@ -193,18 +193,19 @@ fn part1(all_directions: &Directions) -> Result<i32> {
         .context("failed to find any cross points")
 }
 
-fn walk_to_cross_point(directions: &Vec<Direction>, destination: Point) -> usize {
+fn walk_to_cross_point(directions: &Vec<Direction>, destination: Point) -> Option<usize> {
     let mut distance = 0;
     let mut location = CENTER;
     for direction in directions {
         let (new_point, marked_points) = location.add_direction(*direction);
         if let Some(index) = marked_points.iter().position(|p| *p == destination) {
-            // TODO: may not work since depends on walk direction.
             println!("{} {}", marked_points.len(), index);
 
             match direction {
-                Direction::U(_) | Direction::L(_) => return distance + marked_points.len() - index,
-                Direction::D(_) | Direction::R(_) => return distance + index + 1,
+                Direction::U(_) | Direction::L(_) => {
+                    return Some(distance + marked_points.len() - index)
+                }
+                Direction::D(_) | Direction::R(_) => return Some(distance + index + 1),
             };
         } else {
             location = new_point;
@@ -212,8 +213,7 @@ fn walk_to_cross_point(directions: &Vec<Direction>, destination: Point) -> usize
         }
     }
 
-    //
-    0
+    None
 }
 
 #[test]
@@ -260,9 +260,10 @@ fn part2(all_directions: &Directions) -> Result<usize> {
                 .map(|directions| walk_to_cross_point(&directions, *destination))
                 .collect()
         })
-        .map(|distances: Vec<usize>| distances.iter().sum())
+        .map(|distances: Option<Vec<usize>>| Some(distances?.iter().sum()))
         .min()
-        .context("No cross points found")
+        .context("No cross points found")?
+        .context("error happened")
 }
 
 #[test]
