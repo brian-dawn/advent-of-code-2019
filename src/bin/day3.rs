@@ -1,7 +1,6 @@
 use std::cmp;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fs;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -74,14 +73,14 @@ impl Point {
 
 #[test]
 fn test_manhatten_distance() {
-    assert_eq!(3, center.manhatten_distance(Point::new(3, 0)));
-    assert_eq!(3, center.manhatten_distance(Point::new(-3, 0)));
-    assert_eq!(3, center.manhatten_distance(Point::new(0, 3)));
-    assert_eq!(3, center.manhatten_distance(Point::new(0, -3)));
-    assert_eq!(5, center.manhatten_distance(Point::new(2, 3)));
-    assert_eq!(5, center.manhatten_distance(Point::new(2, -3)));
-    assert_eq!(5, center.manhatten_distance(Point::new(-2, 3)));
-    assert_eq!(5, center.manhatten_distance(Point::new(-2, -3)));
+    assert_eq!(3, CENTER.manhatten_distance(Point::new(3, 0)));
+    assert_eq!(3, CENTER.manhatten_distance(Point::new(-3, 0)));
+    assert_eq!(3, CENTER.manhatten_distance(Point::new(0, 3)));
+    assert_eq!(3, CENTER.manhatten_distance(Point::new(0, -3)));
+    assert_eq!(5, CENTER.manhatten_distance(Point::new(2, 3)));
+    assert_eq!(5, CENTER.manhatten_distance(Point::new(2, -3)));
+    assert_eq!(5, CENTER.manhatten_distance(Point::new(-2, 3)));
+    assert_eq!(5, CENTER.manhatten_distance(Point::new(-2, -3)));
 }
 #[test]
 fn test_points_between() {
@@ -96,19 +95,19 @@ fn test_points_between() {
 
 #[test]
 fn test_add_direction() {
-    let (new_location, points) = center.add_direction(Direction::D(2));
+    let (new_location, points) = CENTER.add_direction(Direction::D(2));
     assert_eq!(new_location, Point::new(0, 2));
     assert_eq!(points, vec!(Point::new(0, 1), Point::new(0, 2)));
 
-    let (new_location2, points2) = center.add_direction(Direction::U(2));
+    let (new_location2, points2) = CENTER.add_direction(Direction::U(2));
     assert_eq!(new_location2, Point::new(0, -2));
     assert_eq!(points2, vec!(Point::new(0, -2), Point::new(0, -1)));
 
-    let (new_location3, points3) = center.add_direction(Direction::R(2));
+    let (new_location3, points3) = CENTER.add_direction(Direction::R(2));
     assert_eq!(new_location3, Point::new(2, 0));
     assert_eq!(points3, vec!(Point::new(1, 0), Point::new(2, 0)));
 
-    let (new_location4, points4) = center.add_direction(Direction::L(2));
+    let (new_location4, points4) = CENTER.add_direction(Direction::L(2));
     assert_eq!(new_location4, Point::new(-2, 0));
     assert_eq!(points4, vec!(Point::new(-2, 0), Point::new(-1, 0)));
 
@@ -124,14 +123,14 @@ fn test_add_direction() {
 type Directions = Vec<Vec<Direction>>;
 type Grid = HashMap<Point, HashSet<usize>>;
 
-const center: Point = Point { x: 0, y: 0 };
+const CENTER: Point = Point { x: 0, y: 0 };
 
 fn walk(all_directions: &Directions) -> Grid {
     let mut grid = HashMap::new();
     let mut wire_index = 0;
 
     for directions in all_directions {
-        let mut location = center;
+        let mut location = CENTER;
         for direction in directions {
             let (new_point, marked_points) = location.add_direction(*direction);
             location = new_point;
@@ -189,9 +188,32 @@ fn part1(all_directions: &Directions) -> Result<i32> {
 
     grid.iter()
         .filter(|(_, v)| v.len() > 1)
-        .map(|(k, _)| k.manhatten_distance(center))
+        .map(|(k, _)| k.manhatten_distance(CENTER))
         .min()
         .context("failed to find any cross points")
+}
+
+fn walk_to_cross_point(directions: &Vec<Direction>, destination: Point) -> usize {
+    let mut distance = 0;
+    let mut location = CENTER;
+    for direction in directions {
+        let (new_point, marked_points) = location.add_direction(*direction);
+        if let Some(index) = marked_points.iter().position(|p| *p == destination) {
+            // TODO: may not work since depends on walk direction.
+            println!("{} {}", marked_points.len(), index);
+
+            match direction {
+                Direction::U(_) | Direction::L(_) => return distance + marked_points.len() - index,
+                Direction::D(_) | Direction::R(_) => return distance + index + 1,
+            };
+        } else {
+            location = new_point;
+            distance += marked_points.len();
+        }
+    }
+
+    //
+    0
 }
 
 #[test]
@@ -220,11 +242,56 @@ fn test_part1() -> Result<()> {
     Ok(())
 }
 
+fn part2(all_directions: &Directions) -> Result<usize> {
+    let grid = walk(all_directions);
+
+    let cross_points: Vec<Point> = grid
+        .iter()
+        .filter(|(_, v)| v.len() > 1)
+        .map(|(k, _)| *k)
+        .collect();
+
+    cross_points
+        .iter()
+        .map(|destination| {
+            println!("");
+            all_directions
+                .iter()
+                .map(|directions| walk_to_cross_point(&directions, *destination))
+                .collect()
+        })
+        .map(|distances: Vec<usize>| distances.iter().sum())
+        .min()
+        .context("No cross points found")
+}
+
+#[test]
+fn test_part2() -> Result<()> {
+    let input = vec![
+        parse_line("R75,D30,R83,U83,L12,D49,R71,U7,L72").context("parse failed")?,
+        parse_line("U62,R66,U55,R34,D71,R55,D58,R83").context("parse failed")?,
+    ];
+
+    assert_eq!(610, part2(&input)?);
+
+    let input2 = vec![
+        parse_line("R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51").context("parse failed")?,
+        parse_line("U98,R91,D20,R16,D67,R40,U7,R15,U6,R7").context("parse failed")?,
+    ];
+
+    assert_eq!(410, part2(&input2)?);
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let input = read_input()?;
 
     let part1_answer = part1(&input)?;
     println!("part1: {}", part1_answer);
+
+    let part2_answer = part2(&input)?;
+    println!("part2: {}", part2_answer);
 
     Ok(())
 }
