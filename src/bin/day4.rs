@@ -1,9 +1,9 @@
 use itertools::Itertools;
 
-const INPUT_START: i32 = 240298;
-const INPUT_END: i32 = 784956;
+const INPUT_START: usize = 240298;
+const INPUT_END: usize = 784956;
 
-fn valid(password: i32) -> bool {
+fn valid(password: usize) -> bool {
     let mut previous = None;
     let mut n = password;
     let mut found_double = false;
@@ -35,31 +35,32 @@ fn test_valid() {
     assert!(!valid(123450));
 }
 
-fn valid_only_doubles(password: i32) -> bool {
+fn valid_only_doubles(password: usize) -> bool {
+    let mut buf: [usize; 10] = [0; 10];
+
     let mut n = password;
-    let mut digits = Vec::new();
+    let mut previous = 99;
     while n != 0 {
         let digit = n % 10;
-        digits.push(digit);
+
+        if previous < digit {
+            return false;
+        }
+
+        buf[digit] += 1;
+        previous = digit;
         n = n / 10;
     }
 
     let mut double_found = false;
-    let mut previous = 99;
-    for (digit, count) in digits
-        .into_iter()
-        .group_by(|i| *i)
-        .into_iter()
-        .map(|(key, grp)| (key, grp.count()))
-    {
+    for i in 0..10 {
+        let count = buf[i];
+
         if count == 2 {
             double_found = true;
         }
-        if previous < digit {
-            return false;
-        }
-        previous = digit;
     }
+
     return double_found;
 }
 
