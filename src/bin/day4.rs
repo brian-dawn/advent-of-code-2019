@@ -40,7 +40,7 @@ fn valid_only_doubles(password: usize) -> bool {
 
     let mut n = password;
     let mut previous = 99;
-    while n != 0 {
+    for _ in 0..6 {
         let digit = n % 10;
 
         if previous < digit {
@@ -50,6 +50,14 @@ fn valid_only_doubles(password: usize) -> bool {
         buf[digit] += 1;
         previous = digit;
         n = n / 10;
+
+        if n == 0 {
+            break;
+        }
+    }
+
+    if n != 0 {
+        return false;
     }
 
     let mut double_found = false;
@@ -68,7 +76,7 @@ fn valid_only_doubles(password: usize) -> bool {
 fn test_valid_only_doubles() {
     assert!(!valid_only_doubles(12345));
     assert!(valid_only_doubles(123455));
-    assert!(valid_only_doubles(1123459));
+    assert!(valid_only_doubles(112459));
     assert!(valid_only_doubles(111122));
     assert!(!valid_only_doubles(123444));
     assert!(!valid_only_doubles(111458));
