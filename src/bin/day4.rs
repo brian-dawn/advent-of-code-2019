@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 const INPUT_START: usize = 240298;
 const INPUT_END: usize = 784956;
 
@@ -60,16 +58,15 @@ fn valid_only_doubles(password: usize) -> bool {
         return false;
     }
 
-    let mut double_found = false;
     for i in 0..10 {
         let count = buf[i];
 
         if count == 2 {
-            double_found = true;
+            return true;
         }
     }
 
-    return double_found;
+    false
 }
 
 #[test]
