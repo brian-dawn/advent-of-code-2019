@@ -24,8 +24,6 @@ struct OpCodeMode {
 
 impl From<i32> for OpCodeMode {
     fn from(code: i32) -> OpCodeMode {
-        let _opcode = code % 100;
-
         OpCodeMode {
             opcode: (code % 100) as u8,
             p1: ((code / 100) % 10) as u8,
