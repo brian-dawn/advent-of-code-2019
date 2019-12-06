@@ -1,8 +1,5 @@
-// Objects only orbit exactly one thing.
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::fs;
-use std::iter::FromIterator;
 
 use anyhow::{Context, Result};
 #[derive(Debug, PartialEq, Eq)]
@@ -20,9 +17,7 @@ fn sub_walk(orbits: &Orbits, parents: usize) -> usize {
         Orbits::HasMoons(_, children) => {
             let child_sum: usize = children.iter().map(|c| sub_walk(c, parents + 1)).sum();
             let indirect = if parents >= 1 { parents - 1 } else { 0 };
-            indirect          // Our indirect
-            + children.len()  // The direct
-            + child_sum // The indirect and direct of the children
+            indirect + children.len() + child_sum
         }
     }
 }
