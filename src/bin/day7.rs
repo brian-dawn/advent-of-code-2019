@@ -10,11 +10,11 @@ use permutohedron::Heap;
 
 #[derive(Debug, PartialEq, Eq)]
 enum Parameter {
-    PositionMode(i32),
-    ImmediateMode(i32),
+    PositionMode(i64),
+    ImmediateMode(i64),
 }
 
-type Memory = Vec<i32>;
+type Memory = Vec<i64>;
 
 #[derive(Debug, PartialEq, Eq)]
 struct OpCodeMode {
@@ -24,8 +24,8 @@ struct OpCodeMode {
     p3: u8,
 }
 
-impl From<i32> for OpCodeMode {
-    fn from(code: i32) -> OpCodeMode {
+impl From<i64> for OpCodeMode {
+    fn from(code: i64) -> OpCodeMode {
         OpCodeMode {
             opcode: (code % 100) as u8,
             p1: ((code / 100) % 10) as u8,
@@ -36,18 +36,18 @@ impl From<i32> for OpCodeMode {
 }
 
 impl Parameter {
-    fn build(mode: u8, parameter: i32) -> Result<Parameter> {
+    fn build(mode: u8, parameter: i64) -> Result<Parameter> {
         match mode {
             0 => Ok(Parameter::PositionMode(parameter)),
             1 => Ok(Parameter::ImmediateMode(parameter)),
             _ => Err(anyhow!("unknown mode {}", mode)),
         }
     }
-    fn realize(self, memory: &Memory) -> Result<i32> {
+    fn realize(self, memory: &Memory) -> Result<i64> {
         match self {
             Parameter::PositionMode(n) => {
                 let u: usize = n.try_into()?;
-                let out: &i32 = memory
+                let out: &i64 = memory
                     .get(u)
                     .context(format!("failed to load memory address {}", n))?;
                 Ok(*out)
@@ -61,96 +61,122 @@ fn read_input() -> Result<Memory> {
     let contents = fs::read_to_string("input/day7.txt")?;
     contents
         .split(',')
-        .map(|s| Ok(s.trim().parse::<i32>()?))
+        .map(|s| Ok(s.trim().parse::<i64>()?))
         .collect()
 }
 
-fn run_program(program: &mut Memory, input: &Vec<i32>) -> Result<i32> {
-    let mut index = 0;
-    let mut outputs = Vec::new();
-    let mut inputs = input.clone();
-    loop {
-        let code = program.get(index).context("read failed")?;
-        let modes: OpCodeMode = (*code).into();
-
-        let raw1 = program.get(index + 1).map(|i| *i);
-        let raw2 = program.get(index + 2).map(|i| *i);
-        let raw3 = program.get(index + 3).map(|i| *i);
-
-        let p1 = raw1.context("invalid program p1");
-        let _p2 = raw2.context("invalid program p2");
-        let p3 = raw3.context("invalid program p3");
-
-        let real_p1 = raw1
-            .context("invalid program realp1")
-            .and_then(|i| Parameter::build(modes.p1, i)?.realize(program));
-        let real_p2 = raw2
-            .context("invalid program realp2")
-            .and_then(|i| Parameter::build(modes.p2, i)?.realize(program));
-        let _real_p3 = raw3
-            .context("invalid program realp3")
-            .and_then(|i| Parameter::build(modes.p3, i)?.realize(program));
-
-        match modes.opcode {
-            1 => {
-                index += 4;
-                let output_addr: usize = p3?.try_into()?;
-                program[output_addr] = real_p1? + real_p2?;
-            }
-
-            2 => {
-                index += 4;
-                let output_addr: usize = p3?.try_into()?;
-                program[output_addr] = real_p1? * real_p2?;
-            }
-
-            3 => {
-                index += 2;
-                let addr: usize = p1?.try_into()?;
-                let inp = inputs.pop().context("ran out of inputs")?;
-                program[addr] = inp;
-            }
-
-            4 => {
-                index += 2;
-                outputs.push(real_p1?);
-            }
-            5 => {
-                index += 3;
-                if real_p1? != 0 {
-                    index = real_p2?.try_into()?;
-                }
-            }
-            6 => {
-                index += 3;
-                if real_p1? == 0 {
-                    index = real_p2?.try_into()?;
-                }
-            }
-            7 => {
-                index += 4;
-
-                let output_addr: usize = p3?.try_into()?;
-                program[output_addr] = if real_p1? < real_p2? { 1 } else { 0 };
-            }
-
-            8 => {
-                index += 4;
-
-                let output_addr: usize = p3?.try_into()?;
-                program[output_addr] = if real_p1? == real_p2? { 1 } else { 0 };
-            }
-            99 => break,
-            op => {
-                return Err(anyhow!("unknown opcode {}", modes.opcode));
-            }
-        };
-    }
-
-    outputs.last().context("no output").map(|i| *i)
+struct CPU {
+    mem: Memory,
+    pc: usize,
+    last_output: Option<i64>,
+    inputs: Vec<i64>,
 }
 
-fn process_phase(program: &Memory, phase: &[i32]) -> Result<i32> {
+enum Status<T> {
+    Ready(T),
+    Halted(T),
+}
+
+impl CPU {
+    fn new(memory: &Memory) -> CPU {
+        CPU {
+            mem: memory.clone(),
+            pc: 0,
+            last_output: None,
+            inputs: Vec::new(),
+        }
+    }
+
+    fn add_input(&mut self, input: i64) {
+        self.inputs.push(input)
+    }
+    fn step(&mut self) -> Result<Status<i64>> {
+        println!("{:?}", self.inputs);
+        loop {
+            let code = self.mem.get(self.pc).context("read failed")?;
+            let modes: OpCodeMode = (*code).into();
+
+            let raw1 = self.mem.get(self.pc + 1).map(|i| *i);
+            let raw2 = self.mem.get(self.pc + 2).map(|i| *i);
+            let raw3 = self.mem.get(self.pc + 3).map(|i| *i);
+
+            let p1 = raw1.context("invalid program p1");
+            let _p2 = raw2.context("invalid program p2");
+            let p3 = raw3.context("invalid program p3");
+
+            let real_p1 = raw1
+                .context("invalid program realp1")
+                .and_then(|i| Parameter::build(modes.p1, i)?.realize(&self.mem));
+            let real_p2 = raw2
+                .context("invalid program realp2")
+                .and_then(|i| Parameter::build(modes.p2, i)?.realize(&self.mem));
+            let _real_p3 = raw3
+                .context("invalid program realp3")
+                .and_then(|i| Parameter::build(modes.p3, i)?.realize(&self.mem));
+
+            match modes.opcode {
+                1 => {
+                    self.pc += 4;
+                    let output_addr: usize = p3?.try_into()?;
+                    self.mem[output_addr] = real_p1? + real_p2?;
+                }
+
+                2 => {
+                    self.pc += 4;
+                    let output_addr: usize = p3?.try_into()?;
+                    self.mem[output_addr] = real_p1? * real_p2?;
+                }
+
+                3 => {
+                    self.pc += 2;
+                    let addr: usize = p1?.try_into()?;
+                    let inp = self.inputs.pop().context("ran out of inputs")?;
+                    self.mem[addr] = inp;
+                }
+
+                4 => {
+                    self.pc += 2;
+                    let val = real_p1?;
+                    self.last_output = Some(val);
+                    return Ok(Status::Ready(val));
+                }
+                5 => {
+                    self.pc += 3;
+                    if real_p1? != 0 {
+                        self.pc = real_p2?.try_into()?;
+                    }
+                }
+                6 => {
+                    self.pc += 3;
+                    if real_p1? == 0 {
+                        self.pc = real_p2?.try_into()?;
+                    }
+                }
+                7 => {
+                    self.pc += 4;
+
+                    let output_addr: usize = p3?.try_into()?;
+                    self.mem[output_addr] = if real_p1? < real_p2? { 1 } else { 0 };
+                }
+
+                8 => {
+                    self.pc += 4;
+
+                    let output_addr: usize = p3?.try_into()?;
+                    self.mem[output_addr] = if real_p1? == real_p2? { 1 } else { 0 };
+                }
+                99 => break,
+                op => {
+                    return Err(anyhow!("unknown opcode {}", modes.opcode));
+                }
+            };
+        }
+
+        return Ok(Status::Halted(self.last_output.context("No output")?));
+    }
+}
+
+fn process_phase(program: &Memory, phase: &[i64]) -> Result<i64> {
     let mut prog = program.clone();
     (0..5).fold(Ok(0), |input_signal, index| match input_signal {
         Ok(signal) => {
@@ -162,7 +188,7 @@ fn process_phase(program: &Memory, phase: &[i32]) -> Result<i32> {
     })
 }
 
-fn find_biggest_phase(program: &Memory) -> Result<i32> {
+fn find_biggest_phase(program: &Memory) -> Result<i64> {
     let mut data = [0, 1, 2, 3, 4];
     let mut heap = Heap::new(&mut data);
 
@@ -180,10 +206,88 @@ fn find_biggest_phase(program: &Memory) -> Result<i32> {
     }
     max_power.context("failed to get max power")
 }
+
+/// Helper function for running a oneshot program on a CPU.
+fn run_program(memory: &Memory, input: &Vec<i64>) -> Result<i64> {
+    let mut cpu = CPU::new(memory);
+    cpu.inputs = input.clone();
+    match cpu.step()? {
+        Status::Ready(out) => Ok(out),
+        Status::Halted(out) => Ok(out),
+    }
+}
+
+fn part2(program: &Memory) -> Result<i64> {
+    let mut data = [0, 1, 2, 3, 4];
+    let mut heap = Heap::new(&mut data);
+
+    let mut max_power = 0;
+    while let Some(phase) = heap.next_permutation() {
+        let power = process_phase(&program, phase)?;
+
+        // Create 5 CPUs with the phase input as the first input.
+        let mut cpus: Vec<CPU> = phase
+            .iter()
+            .map(|phase| {
+                let mut cpu = CPU::new(program);
+                cpu.inputs = vec![*phase];
+                cpu
+            })
+            .collect();
+
+        // Start at 0.
+        cpus[0].add_input(0);
+
+        let mut power = 0;
+        let mut index = 0;
+        loop {
+            match cpus[index].step()? {
+                Status::Ready(output) => {
+                    power = output;
+                }
+                Status::Halted(output) => {
+                    power = output;
+                    if index == 4 {
+                        break;
+                    }
+                }
+            }
+            index = (index + 1) % 5;
+            cpus[index].add_input(power);
+        }
+
+        max_power = std::cmp::max(max_power, power);
+    }
+
+    Ok(max_power)
+}
+
 fn main() -> Result<()> {
     let program = read_input()?;
     let part1 = find_biggest_phase(&program)?;
     println!("part1: {}", part1);
+
+    let part2 = part2(&program)?;
+    println!("part2: {}", part2);
+    Ok(())
+}
+
+#[test]
+fn test_part2() -> Result<()> {
+    let mut program = vec![
+        3, 26, 1001, 26, -4, 26, 3, 27, 1002, 27, 2, 27, 1, 27, 26, 27, 4, 27, 1001, 28, -1, 28,
+        1005, 28, 6, 99, 0, 0, 5,
+    ];
+
+    assert_eq!(139629729, part2(&program)?);
+
+    program = vec![
+        3, 52, 1001, 52, -5, 52, 3, 53, 1, 52, 56, 54, 1007, 54, 5, 55, 1005, 55, 26, 1001, 54, -5,
+        54, 1105, 1, 12, 1, 53, 54, 53, 1008, 54, 0, 55, 1001, 55, 1, 55, 2, 53, 55, 53, 4, 53,
+        1001, 56, -1, 56, 1005, 56, 6, 99, 0, 0, 0, 0, 10,
+    ];
+
+    assert_eq!(18216, part2(&program)?);
 
     Ok(())
 }
