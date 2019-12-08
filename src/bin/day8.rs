@@ -44,6 +44,23 @@ impl Image {
         let layers: Vec<&[u8]> = self.data.chunks(self.width * self.height).collect();
         layers
     }
+
+    fn flatten(&self) -> Vec<u8> {
+        let layers = self.layers();
+        let mut output = vec![2; self.width * self.height];
+
+        for i in 0..self.width * self.height {
+            let mut pixel = 2;
+            for layer in &layers {
+                pixel = layer[i];
+                if pixel != 2 {
+                    break;
+                }
+            }
+            output[i] = pixel;
+        }
+        output
+    }
 }
 
 fn part1(input: &str) -> Result<i32> {
@@ -78,6 +95,25 @@ fn part1(input: &str) -> Result<i32> {
     Ok(num1 * num2)
 }
 
+fn part2(input: &str) -> Result<()> {
+    let image = Image::decode(input, 25, 6)?;
+    let flat = image.flatten();
+
+    for (i, pixel) in flat.iter().enumerate() {
+        let out = match pixel {
+            1 => "█",
+            _ => " ",
+        };
+        print!("{}", out);
+
+        if (i + 1) % image.width == 0 {
+            println!(); // newline
+        }
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let input = fs::read_to_string("input/day8.txt")?;
     let input = input.trim();
@@ -85,6 +121,16 @@ fn main() -> Result<()> {
     let part1 = part1(&input)?;
     println!("part1: {}", part1);
 
+    part2(&input)?;
+    Ok(())
+}
+
+#[test]
+fn test_flatten() -> Result<()> {
+    let image = Image::decode("0222112222120000", 2, 2)?;
+    let flat = image.flatten();
+
+    assert_eq!(vec![0, 1, 1, 0], flat);
     Ok(())
 }
 
