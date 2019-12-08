@@ -225,7 +225,6 @@ fn part2(program: &Memory) -> Result<i64> {
 
     let mut max_power = 0;
     while let Some(phase) = heap.next_permutation() {
-
         // Create 5 CPUs with the phase input as the first input.
         let mut cpus: Vec<CPU> = phase
             .iter()
@@ -239,7 +238,7 @@ fn part2(program: &Memory) -> Result<i64> {
         // Start at 0.
         cpus[0].add_input(0);
 
-        let mut power = 0;
+        let mut power;
         let mut index = 0;
         loop {
             match cpus[index].step()? {
