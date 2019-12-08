@@ -129,7 +129,7 @@ impl CPU {
                 3 => {
                     self.pc += 2;
                     let addr: usize = p1?.try_into()?;
-                    let inp:&i64 = self.inputs.first().context("ran out of inputs")?;
+                    let inp: &i64 = self.inputs.first().context("ran out of inputs")?;
                     self.mem[addr] = inp.clone();
                     let rest = self.inputs.iter().skip(1).map(|i| *i).collect::<Vec<i64>>();
                     self.inputs = rest;
@@ -220,7 +220,7 @@ fn run_program(memory: &Memory, input: &Vec<i64>) -> Result<i64> {
 }
 
 fn part2(program: &Memory) -> Result<i64> {
-    let mut data = [5,6,7,8,9];
+    let mut data = [5, 6, 7, 8, 9];
     let mut heap = Heap::new(&mut data);
 
     let mut max_power = 0;
