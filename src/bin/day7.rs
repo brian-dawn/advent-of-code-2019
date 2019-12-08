@@ -14,8 +14,6 @@ enum Parameter {
     ImmediateMode(i64),
 }
 
-type Memory = Vec<i64>;
-
 #[derive(Debug, PartialEq, Eq)]
 struct OpCodeMode {
     opcode: u8,
@@ -43,7 +41,7 @@ impl Parameter {
             _ => Err(anyhow!("unknown mode {}", mode)),
         }
     }
-    fn realize(self, memory: &Memory) -> Result<i64> {
+    fn realize(self, memory: &[i64]) -> Result<i64> {
         match self {
             Parameter::PositionMode(n) => {
                 let u: usize = n.try_into()?;
@@ -57,7 +55,7 @@ impl Parameter {
     }
 }
 
-fn read_input() -> Result<Memory> {
+fn read_input() -> Result<Vec<i64>> {
     let contents = fs::read_to_string("input/day7.txt")?;
     contents
         .split(',')
@@ -66,7 +64,7 @@ fn read_input() -> Result<Memory> {
 }
 
 struct CPU {
-    mem: Memory,
+    mem: Vec<i64>,
     pc: usize,
     last_output: Option<i64>,
     inputs: Vec<i64>,
@@ -78,9 +76,9 @@ enum Status<T> {
 }
 
 impl CPU {
-    fn new(memory: &Memory) -> CPU {
+    fn new(memory: &[i64]) -> CPU {
         CPU {
-            mem: memory.clone(),
+            mem: memory.to_vec(),
             pc: 0,
             last_output: None,
             inputs: Vec::new(),
@@ -95,9 +93,9 @@ impl CPU {
             let code = self.mem.get(self.pc).context("read failed")?;
             let modes: OpCodeMode = (*code).into();
 
-            let raw1 = self.mem.get(self.pc + 1).map(|i| *i);
-            let raw2 = self.mem.get(self.pc + 2).map(|i| *i);
-            let raw3 = self.mem.get(self.pc + 3).map(|i| *i);
+            let raw1 = self.mem.get(self.pc + 1).copied();
+            let raw2 = self.mem.get(self.pc + 2).copied();
+            let raw3 = self.mem.get(self.pc + 3).copied();
 
             let p1 = raw1.context("invalid program p1");
             let _p2 = raw2.context("invalid program p2");
@@ -130,8 +128,8 @@ impl CPU {
                     self.pc += 2;
                     let addr: usize = p1?.try_into()?;
                     let inp: &i64 = self.inputs.first().context("ran out of inputs")?;
-                    self.mem[addr] = inp.clone();
-                    let rest = self.inputs.iter().skip(1).map(|i| *i).collect::<Vec<i64>>();
+                    self.mem[addr] = *inp;
+                    let rest = self.inputs.iter().skip(1).copied().collect::<Vec<i64>>();
                     self.inputs = rest;
                     //let inp = self.inputs.pop().context("ran out of inputs")?;
                 }
@@ -174,23 +172,23 @@ impl CPU {
             };
         }
 
-        return Ok(Status::Halted(self.last_output.context("No output")?));
+        Ok(Status::Halted(self.last_output.context("No output")?))
     }
 }
 
-fn process_phase(program: &Memory, phase: &[i64]) -> Result<i64> {
-    let mut prog = program.clone();
+fn process_phase(program: &[i64], phase: &[i64]) -> Result<i64> {
+    let prog = program.to_vec();
     (0..5).fold(Ok(0), |input_signal, index| match input_signal {
         Ok(signal) => {
             let input = vec![phase[index], signal];
-            let output = run_program(&mut prog, &input)?;
+            let output = run_program(&prog, &input)?;
             Ok(output)
         }
         Err(_) => input_signal,
     })
 }
 
-fn find_biggest_phase(program: &Memory) -> Result<i64> {
+fn find_biggest_phase(program: &[i64]) -> Result<i64> {
     let mut data = [0, 1, 2, 3, 4];
     let mut heap = Heap::new(&mut data);
 
@@ -210,16 +208,16 @@ fn find_biggest_phase(program: &Memory) -> Result<i64> {
 }
 
 /// Helper function for running a oneshot program on a CPU.
-fn run_program(memory: &Memory, input: &Vec<i64>) -> Result<i64> {
+fn run_program(memory: &[i64], input: &[i64]) -> Result<i64> {
     let mut cpu = CPU::new(memory);
-    cpu.inputs = input.clone();
+    cpu.inputs = input.to_vec();
     match cpu.step()? {
         Status::Ready(out) => Ok(out),
         Status::Halted(out) => Ok(out),
     }
 }
 
-fn part2(program: &Memory) -> Result<i64> {
+fn part2(program: &[i64]) -> Result<i64> {
     let mut data = [5, 6, 7, 8, 9];
     let mut heap = Heap::new(&mut data);
 
