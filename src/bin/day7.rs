@@ -91,7 +91,6 @@ impl CPU {
         self.inputs.push(input)
     }
     fn step(&mut self) -> Result<Status<i64>> {
-        println!("{:?}", self.inputs);
         loop {
             let code = self.mem.get(self.pc).context("read failed")?;
             let modes: OpCodeMode = (*code).into();
@@ -130,8 +129,11 @@ impl CPU {
                 3 => {
                     self.pc += 2;
                     let addr: usize = p1?.try_into()?;
-                    let inp = self.inputs.pop().context("ran out of inputs")?;
-                    self.mem[addr] = inp;
+                    let inp:&i64 = self.inputs.first().context("ran out of inputs")?;
+                    self.mem[addr] = inp.clone();
+                    let rest = self.inputs.iter().skip(1).map(|i| *i).collect::<Vec<i64>>();
+                    self.inputs = rest;
+                    //let inp = self.inputs.pop().context("ran out of inputs")?;
                 }
 
                 4 => {
@@ -166,7 +168,7 @@ impl CPU {
                     self.mem[output_addr] = if real_p1? == real_p2? { 1 } else { 0 };
                 }
                 99 => break,
-                op => {
+                _ => {
                     return Err(anyhow!("unknown opcode {}", modes.opcode));
                 }
             };
@@ -180,7 +182,7 @@ fn process_phase(program: &Memory, phase: &[i64]) -> Result<i64> {
     let mut prog = program.clone();
     (0..5).fold(Ok(0), |input_signal, index| match input_signal {
         Ok(signal) => {
-            let input = vec![signal, phase[index]];
+            let input = vec![phase[index], signal];
             let output = run_program(&mut prog, &input)?;
             Ok(output)
         }
@@ -218,12 +220,11 @@ fn run_program(memory: &Memory, input: &Vec<i64>) -> Result<i64> {
 }
 
 fn part2(program: &Memory) -> Result<i64> {
-    let mut data = [0, 1, 2, 3, 4];
+    let mut data = [5,6,7,8,9];
     let mut heap = Heap::new(&mut data);
 
     let mut max_power = 0;
     while let Some(phase) = heap.next_permutation() {
-        let power = process_phase(&program, phase)?;
 
         // Create 5 CPUs with the phase input as the first input.
         let mut cpus: Vec<CPU> = phase
